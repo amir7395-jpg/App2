@@ -18,6 +18,15 @@ export const config = {
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? "",
   twilioFromNumber: process.env.TWILIO_FROM_NUMBER ?? "",
   twilioVoice: process.env.TWILIO_VOICE ?? "Polly.Joanna-Neural",
+
+  quickbooksClientId: process.env.QUICKBOOKS_CLIENT_ID ?? "",
+  quickbooksClientSecret: process.env.QUICKBOOKS_CLIENT_SECRET ?? "",
+  /** "sandbox" while developing against an Intuit sandbox company, "production" for real customers. */
+  quickbooksEnvironment: (process.env.QUICKBOOKS_ENVIRONMENT === "production" ? "production" : "sandbox") as
+    | "sandbox"
+    | "production",
+  /** 32-byte key (hex or base64) used to encrypt stored QuickBooks tokens. */
+  tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY ?? "",
 };
 
 export const PLAN = {
@@ -35,3 +44,4 @@ export function sessionSecretBytes(): Uint8Array {
 export const telephonyEnabled = () =>
   Boolean(config.twilioAccountSid && config.twilioAuthToken && config.twilioFromNumber);
 export const agentEnabled = () => Boolean(config.anthropicApiKey);
+export const quickbooksEnabled = () => Boolean(config.quickbooksClientId && config.quickbooksClientSecret);

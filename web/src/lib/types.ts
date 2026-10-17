@@ -8,6 +8,21 @@ export type AppointmentDTO = Wire<Appointment> & { lead: { id: string; name: str
 export type InvoiceDTO = Wire<Invoice> & { daysOverdue: number; inCollections: boolean };
 export type CallDTO = Omit<Wire<Call>, "history"> & { contactName?: string; invoiceNumber?: string | null };
 export type CallMessageDTO = Wire<CallMessage>;
+export type QuickBooksStatus =
+  | { connected: false; available: boolean; environment: string }
+  | {
+      connected: true;
+      available: boolean;
+      environment: string;
+      companyName: string | null;
+      realmId: string;
+      customersConsented: boolean;
+      lastSyncAt: string | null;
+      lastSyncError: string | null;
+      lastSyncImported: number | null;
+      needsReconnect: boolean;
+    };
+
 export type Stats = {
   openLeads: number;
   upcomingAppointments: number;

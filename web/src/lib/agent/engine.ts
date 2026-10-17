@@ -11,7 +11,7 @@ import type { DB } from "../db";
 import { businesses, callMessages, calls, invoices, leads } from "../db/schema";
 import { config } from "../config";
 import type { Telephony } from "../telephony";
-import { invoiceSystemPrompt, leadSystemPrompt } from "./prompts";
+import { aiDisclosure, callConnected, invoiceSystemPrompt, leadSystemPrompt } from "./prompts";
 import { executeTool, toApiTools, toolsFor, type ToolContext } from "./tools";
 
 /** The one SDK call the engine makes; injectable so tests can script Claude's replies. */
@@ -38,11 +38,14 @@ export interface TurnResult {
 export async function runAgentTurn(opts: {
   db: DB;
   callId: string;
-  contactSaid: string;
+  /** What the contact said; ignored on the opening turn. */
+  contactSaid?: string;
   telephony: Telephony;
   createMessage?: CreateMessage;
   now?: Date;
-  /** When true, the contact's words are not shown in the transcript (e.g. the "call connected" cue). */
+  /** Opening turn: the contact hasn't spoken yet; the fixed AI disclosure is prepended to the reply. */
+  opening?: boolean;
+  /** When true, the contact's words are not shown in the transcript (e.g. silence). */
   hiddenInput?: boolean;
 }): Promise<TurnResult> {
   const { db, callId } = opts;
@@ -65,8 +68,10 @@ export async function runAgentTurn(opts: {
   const tools = toolsFor(call.purpose);
   const apiTools = toApiTools(tools);
   const ctx: ToolContext = { db, business, call, lead, invoice, now: opts.now ?? new Date(), telephony: opts.telephony, events: [] };
-  const history: BetaMessageParam[] = [...call.history, { role: "user", content: opts.contactSaid }];
-  if (!opts.hiddenInput) logMessage(db, callId, "contact", opts.contactSaid);
+  const opening = Boolean(opts.opening);
+  const contactSaid = opening ? callConnected(business) : (opts.contactSaid ?? "");
+  const history: BetaMessageParam[] = [...call.history, { role: "user", content: contactSaid }];
+  if (!opening && !opts.hiddenInput) logMessage(db, callId, "contact", contactSaid);
 
   const spoken: string[] = [];
   let failed = false;
@@ -119,6 +124,7 @@ export async function runAgentTurn(opts: {
 
   let reply = spoken.join(" ");
   let ended = Boolean(ctx.endRequested);
+  if (opening && !failed && !reply) reply = "Do you have a quick moment?";
   if (failed || !reply) {
     if (failed || ended) {
       reply = failed ? FALLBACK_LINE : reply || "Thanks for your time. Goodbye!";
@@ -127,6 +133,7 @@ export async function runAgentTurn(opts: {
       reply = "Sorry, could you say that again?";
     }
   }
+  if (opening) reply = `${aiDisclosure(business)} ${reply}`;
   logMessage(db, callId, "agent", reply);
 
   const closing = ended ? (ctx.endRequested?.summary ?? (failed ? "Agent error; call ended early" : null)) : null;

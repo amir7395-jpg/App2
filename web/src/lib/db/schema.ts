@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 
 const id = () =>
@@ -107,6 +107,9 @@ export const appointments = sqliteTable(
 export const INVOICE_STATUSES = ["open", "promised", "paid", "disputed", "written_off"] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
+export const INVOICE_SOURCES = ["manual", "quickbooks"] as const;
+export type InvoiceSource = (typeof INVOICE_SOURCES)[number];
+
 export const invoices = sqliteTable(
   "invoices",
   {
@@ -114,10 +117,15 @@ export const invoices = sqliteTable(
     businessId: text("business_id")
       .notNull()
       .references(() => businesses.id, { onDelete: "cascade" }),
+    source: text("source").$type<InvoiceSource>().notNull().default("manual"),
+    /** QuickBooks Invoice.Id for imported invoices. */
+    externalId: text("external_id"),
     invoiceNumber: text("invoice_number").notNull(),
     customerName: text("customer_name").notNull(),
-    customerPhone: text("customer_phone").notNull(),
+    /** Null when the QuickBooks customer has no usable phone number (the invoice can't be called). */
+    customerPhone: text("customer_phone"),
     customerEmail: text("customer_email"),
+    /** Amount still owed (QuickBooks Balance for imported invoices). */
     amountCents: integer("amount_cents").notNull(),
     currency: text("currency").notNull().default("USD"),
     issuedAt: integer("issued_at", { mode: "timestamp_ms" }).notNull(),
@@ -129,10 +137,33 @@ export const invoices = sqliteTable(
     collectionAttempts: integer("collection_attempts").notNull().default(0),
     lastCollectionAt: integer("last_collection_at", { mode: "timestamp_ms" }),
     notes: text("notes").notNull().default(""),
+    syncedAt: integer("synced_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
   },
-  (t) => [index("invoices_business_idx").on(t.businessId, t.status)],
+  (t) => [
+    index("invoices_business_idx").on(t.businessId, t.status),
+    uniqueIndex("invoices_external_idx").on(t.businessId, t.source, t.externalId),
+  ],
 );
+
+/** One QuickBooks Online company linked to a business (OAuth 2.0). Tokens are stored encrypted. */
+export const quickbooksConnections = sqliteTable("quickbooks_connections", {
+  businessId: text("business_id")
+    .primaryKey()
+    .references(() => businesses.id, { onDelete: "cascade" }),
+  realmId: text("realm_id").notNull(),
+  companyName: text("company_name"),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp_ms" }).notNull(),
+  refreshTokenExpiresAt: integer("refresh_token_expires_at", { mode: "timestamp_ms" }).notNull(),
+  /** Owner confirms their QuickBooks customers agreed to automated/AI calls about their account. */
+  customersConsented: integer("customers_consented", { mode: "boolean" }).notNull().default(false),
+  lastSyncAt: integer("last_sync_at", { mode: "timestamp_ms" }),
+  lastSyncError: text("last_sync_error"),
+  lastSyncImported: integer("last_sync_imported"),
+  connectedAt: createdAt(),
+});
 
 export const CALL_STATUSES = [
   "queued",
@@ -189,5 +220,6 @@ export type User = typeof users.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
+export type QuickBooksConnection = typeof quickbooksConnections.$inferSelect;
 export type Call = typeof calls.$inferSelect;
 export type CallMessage = typeof callMessages.$inferSelect;

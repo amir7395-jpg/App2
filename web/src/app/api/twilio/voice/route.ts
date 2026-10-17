@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { businesses, calls, invoices, leads } from "@/lib/db/schema";
 import { runAgentTurn } from "@/lib/agent/engine";
-import { CALL_CONNECTED, voicemailScript } from "@/lib/agent/prompts";
+import { voicemailScript } from "@/lib/agent/prompts";
 import { defaultTelephony, isValidTwilioRequest, twiml, voiceWebhookUrl, xml } from "@/lib/telephony";
 import { config } from "@/lib/config";
 
@@ -42,8 +42,14 @@ export async function POST(req: Request) {
   if (isFirstTurn) db.update(calls).set({ status: "in_progress", twilioCallSid: params.CallSid ?? call.twilioCallSid }).where(eq(calls.id, call.id)).run();
 
   const speech = params.SpeechResult?.trim();
-  const contactSaid = isFirstTurn ? CALL_CONNECTED : speech || "(silence: the person did not say anything)";
-  const turn = await runAgentTurn({ db, callId: call.id, contactSaid, hiddenInput: isFirstTurn || !speech, telephony: defaultTelephony() });
+  const turn = await runAgentTurn({
+    db,
+    callId: call.id,
+    opening: isFirstTurn,
+    contactSaid: speech || "(silence: the person did not say anything)",
+    hiddenInput: !speech,
+    telephony: defaultTelephony(),
+  });
 
   if (turn.ended) {
     response.say(say, turn.reply);

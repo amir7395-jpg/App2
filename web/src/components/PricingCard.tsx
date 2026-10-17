@@ -4,10 +4,11 @@ import { PLAN } from "@/lib/config";
 export const PLAN_FEATURES = [
   "AI agent calls new leads and follows up automatically",
   "Books appointments straight onto your calendar",
+  "QuickBooks Online sync: overdue invoices found automatically every hour",
   "Reminds customers about invoices 30+ days overdue",
   "Texts payment links and appointment confirmations",
   "Full call transcripts and outcomes",
-  "Web dashboard plus iPhone and Android apps",
+  "Web dashboard you can use from any device",
   "Cancel anytime",
 ];
 

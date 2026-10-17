@@ -19,7 +19,6 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="lead/[id]" options={{ title: 'Lead' }} />
         <Stack.Screen name="lead-new" options={{ title: 'New lead', presentation: 'modal' }} />
-        <Stack.Screen name="invoice-new" options={{ title: 'New invoice', presentation: 'modal' }} />
         <Stack.Screen name="call/[id]" options={{ title: 'Call' }} />
       </Stack.Protected>
       <Stack.Protected guard={!user}>

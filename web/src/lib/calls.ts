@@ -19,6 +19,7 @@ export function assertCanCallLead(business: Business, lead: Lead, now: Date) {
 export function assertCanCallInvoice(business: Business, invoice: Invoice, now: Date) {
   if (!invoice.consent) throw new CallNotAllowed("This customer has not consented to automated calls");
   if (invoice.status === "paid" || invoice.status === "written_off") throw new CallNotAllowed("Invoice is closed");
+  if (!invoice.customerPhone) throw new CallNotAllowed("This customer has no phone number in QuickBooks");
   if (!isWithinCallingWindow(business, now)) throw new CallNotAllowed("Outside calling hours (9am–8pm business time)");
 }
 
@@ -44,7 +45,7 @@ export async function startPhoneCall(opts: {
       purpose: lead ? "lead" : "invoice",
       leadId: lead?.id,
       invoiceId: invoice?.id,
-      toPhone: lead ? lead.phone : invoice!.customerPhone,
+      toPhone: lead ? lead.phone : invoice!.customerPhone!,
       mode: "phone",
       status: "queued",
       startedAt: now,
@@ -99,7 +100,7 @@ export function startSimulation(db: DB, business: Business, subject: { lead?: Le
       purpose: lead ? "lead" : "invoice",
       leadId: lead?.id,
       invoiceId: invoice?.id,
-      toPhone: lead?.phone ?? invoice!.customerPhone,
+      toPhone: lead?.phone ?? invoice!.customerPhone ?? "(no phone)",
       mode: "simulation",
       status: "in_progress",
       startedAt: new Date(),

@@ -4,7 +4,6 @@ import type { BetaMessage, MessageCreateParamsNonStreaming } from "@anthropic-ai
 import { runAgentTurn, type CreateMessage } from "../agent/engine";
 import { startSimulation } from "../calls";
 import { appointments, callMessages, calls, invoices, leads } from "../db/schema";
-import { CALL_CONNECTED } from "../agent/prompts";
 import { addInvoice, addLead, fakeTelephony, MONDAY_2PM, setup } from "./helpers";
 
 type Block = BetaMessage["content"][number];
@@ -47,9 +46,15 @@ describe("agent engine – lead call", () => {
     ]);
 
     const first = await runAgentTurn({
-      db, callId: call.id, contactSaid: CALL_CONNECTED, hiddenInput: true, telephony, createMessage: script.create, now: MONDAY_2PM,
+      db, callId: call.id, opening: true, telephony, createMessage: script.create, now: MONDAY_2PM,
     });
-    expect(first).toEqual({ reply: expect.stringContaining("AI assistant"), ended: false });
+    expect(first.ended).toBe(false);
+    expect(first.reply).toBe(
+      "Hi, this is an automated call from an AI assistant named Alex, calling on behalf of Acme Plumbing. " +
+        "Hi Jane, this is Alex, an AI assistant calling for Acme Plumbing. Still need help?",
+    );
+    // The model is told the disclosure was already spoken.
+    expect(script.requests[0].messages[0].content).toContain("This was just said to them");
 
     const second = await runAgentTurn({
       db, callId: call.id, contactSaid: "Yes, the first time works.", telephony, createMessage: script.create, now: MONDAY_2PM,
@@ -111,6 +116,38 @@ describe("agent engine – lead call", () => {
   });
 });
 
+describe("AI disclosure", () => {
+  const DISCLOSURE = "Hi, this is an automated call from an AI assistant named Alex, calling on behalf of Acme Plumbing.";
+
+  it("is always the first thing said, whatever the model replies", async () => {
+    const { db, business } = setup();
+    const call = startSimulation(db, business, { invoice: addInvoice(db, business.id) });
+    const script = scripted([() => message([text("Am I speaking with Bob Smith?")], "end_turn")]);
+    const res = await runAgentTurn({ db, callId: call.id, opening: true, telephony: fakeTelephony().telephony, createMessage: script.create });
+    expect(res.reply).toBe(`${DISCLOSURE} Am I speaking with Bob Smith?`);
+    const transcript = db.select().from(callMessages).where(eq(callMessages.callId, call.id)).all();
+    expect(transcript[0]).toMatchObject({ role: "agent", content: res.reply });
+  });
+
+  it("is still spoken when the AI request fails", async () => {
+    const { db, business } = setup();
+    const call = startSimulation(db, business, { lead: addLead(db, business.id) });
+    const res = await runAgentTurn({
+      db, callId: call.id, opening: true, telephony: fakeTelephony().telephony,
+      createMessage: async () => { throw new Error("down"); },
+    });
+    expect(res.reply.startsWith(DISCLOSURE)).toBe(true);
+    expect(res.ended).toBe(true);
+  });
+
+  it("is in the voicemail message too", async () => {
+    const { business } = setup();
+    const { voicemailScript } = await import("../agent/prompts");
+    expect(voicemailScript(business, "invoice", "Bob")).toContain(DISCLOSURE);
+    expect(voicemailScript(business, "lead", "Jane")).toContain(DISCLOSURE);
+  });
+});
+
 describe("agent engine – invoice call", () => {
   it("records a payment promise and texts the payment link on phone calls", async () => {
     const { db, business } = setup();
@@ -139,7 +176,7 @@ describe("agent engine – invoice call", () => {
     const { db, business } = setup();
     const call = startSimulation(db, business, { invoice: addInvoice(db, business.id) });
     const script = scripted([() => message([text("Hi, is this Bob?")], "end_turn")]);
-    await runAgentTurn({ db, callId: call.id, contactSaid: CALL_CONNECTED, hiddenInput: true, telephony: fakeTelephony().telephony, createMessage: script.create });
+    await runAgentTurn({ db, callId: call.id, opening: true, telephony: fakeTelephony().telephony, createMessage: script.create });
     const system = script.requests[0].system as string;
     expect(system).toContain("$450.00");
     expect(system).toContain("INV-1001");

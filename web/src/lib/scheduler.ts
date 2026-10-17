@@ -1,6 +1,6 @@
-import { and, eq, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import type { DB } from "./db";
-import { businesses, invoices, leads, type Business } from "./db/schema";
+import { businesses, invoices, leads, quickbooksConnections, type Business } from "./db/schema";
 import { isWithinCallingWindow } from "./compliance";
 import { startPhoneCall } from "./calls";
 import type { Telephony } from "./telephony";
@@ -36,6 +36,10 @@ export function dueLeads(db: DB, business: Business, now: Date) {
 
 /** Invoices past due by the grace period (30 days by default) and not called recently. */
 export function dueInvoices(db: DB, business: Business, now: Date) {
+  // Without a live QuickBooks connection we can't tell whether imported invoices were paid, so don't call about them.
+  const qbConnected = Boolean(
+    db.select({ id: quickbooksConnections.businessId }).from(quickbooksConnections).where(eq(quickbooksConnections.businessId, business.id)).get(),
+  );
   const overdueBefore = new Date(now.getTime() - business.invoiceGraceDays * DAY);
   const lastCallBefore = new Date(now.getTime() - business.invoiceFollowUpDays * DAY);
   return db
@@ -46,6 +50,8 @@ export function dueInvoices(db: DB, business: Business, now: Date) {
         eq(invoices.businessId, business.id),
         eq(invoices.consent, true),
         eq(invoices.status, "open"),
+        isNotNull(invoices.customerPhone),
+        qbConnected ? undefined : ne(invoices.source, "quickbooks"),
         lte(invoices.dueAt, overdueBefore),
         or(isNull(invoices.lastCollectionAt), lte(invoices.lastCollectionAt, lastCallBefore)),
       ),

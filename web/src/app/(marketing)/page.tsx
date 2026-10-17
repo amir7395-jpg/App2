@@ -20,8 +20,8 @@ const FEATURES = [
   },
   {
     icon: "$",
-    title: "Chases overdue invoices",
-    body: "Once an invoice is 30 days past due, the agent calls with a polite reminder, texts a payment link, and records promised pay dates.",
+    title: "Chases overdue invoices from QuickBooks",
+    body: "Connect QuickBooks Online once. Every hour we find unpaid invoices more than 30 days past due, and the agent calls with a polite reminder, texts a payment link, and records promised pay dates. No data entry.",
   },
   {
     icon: "⚑",
@@ -29,16 +29,16 @@ const FEATURES = [
     body: "Disputes, already-paid claims, or hardship are flagged to you right away instead of argued with. You stay in control of the relationship.",
   },
   {
-    icon: "📱",
-    title: "Runs from your pocket",
-    body: "See every call, transcript, appointment and invoice from the web dashboard or the iPhone and Android apps.",
+    icon: "📋",
+    title: "Every call on the record",
+    body: "See every call, transcript, outcome, appointment and invoice in one dashboard, from any browser.",
   },
 ];
 
 const FAQ = [
   {
     q: "Does the agent say it's an AI?",
-    a: "Yes. Every call starts with the agent introducing itself by name as an AI assistant calling on behalf of your business, and it answers honestly if asked.",
+    a: "Yes. Every call opens with the same fixed sentence — \"Hi, this is an automated call from an AI assistant named …, calling on behalf of [your business].\" — before anything else is said, including on voicemails. If someone asks whether they're talking to a person, the agent answers honestly.",
   },
   {
     q: "Who can the agent call?",
@@ -50,7 +50,7 @@ const FAQ = [
   },
   {
     q: "How does invoice follow-up work?",
-    a: "Add your invoices (or update them as they're paid). When an open invoice passes 30 days overdue — you can change that number — the agent calls with a courtesy reminder, then repeats on the interval you choose. It never threatens, mentions collections, or takes card numbers over the phone.",
+    a: "Connect your QuickBooks Online account and we check it every hour for unpaid invoices more than 30 days past due (you can change that number), along with the customer's phone number. The agent calls with a courtesy reminder and repeats on the interval you choose. When the payment is recorded in QuickBooks, the calls stop automatically. It never threatens, mentions collections, or takes card numbers over the phone.",
   },
   {
     q: "Can I try the agent before it calls real people?",
@@ -106,8 +106,8 @@ export default function Home() {
               <p className="muted" style={{ marginBottom: 0 }}>Hours, services, prices, and anything it should or shouldn&apos;t say.</p>
             </div>
             <div className="card">
-              <h3>Add leads and invoices</h3>
-              <p className="muted" style={{ marginBottom: 0 }}>Type them in, import a CSV, or add them from your phone.</p>
+              <h3>Add leads and connect QuickBooks</h3>
+              <p className="muted" style={{ marginBottom: 0 }}>Type leads in or import a CSV. Overdue invoices come straight from QuickBooks.</p>
             </div>
             <div className="card">
               <h3>Let it work</h3>

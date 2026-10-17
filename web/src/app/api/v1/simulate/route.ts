@@ -5,7 +5,6 @@ import { calls, invoices, leads } from "@/lib/db/schema";
 import { body, HttpError, json, requireSubscriber, route } from "@/lib/http";
 import { startSimulation } from "@/lib/calls";
 import { runAgentTurn } from "@/lib/agent/engine";
-import { CALL_CONNECTED } from "@/lib/agent/prompts";
 import { nullTelephony } from "@/lib/telephony";
 import { agentEnabled } from "@/lib/config";
 
@@ -40,6 +39,6 @@ export const POST = route(async (req) => {
     : undefined;
   if (!lead && !invoice) throw new HttpError(404, "Lead or invoice not found");
   const call = startSimulation(db, business, { lead, invoice });
-  const turn = await runAgentTurn({ db, callId: call.id, contactSaid: CALL_CONNECTED, hiddenInput: true, telephony: nullTelephony });
+  const turn = await runAgentTurn({ db, callId: call.id, opening: true, telephony: nullTelephony });
   return json({ callId: call.id, ...turn }, 201);
 });

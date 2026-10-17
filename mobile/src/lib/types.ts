@@ -38,7 +38,7 @@ export type Invoice = {
   id: string;
   invoiceNumber: string;
   customerName: string;
-  customerPhone: string;
+  customerPhone: string | null;
   amountCents: number;
   currency: string;
   dueAt: string;

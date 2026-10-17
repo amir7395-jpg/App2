@@ -73,9 +73,11 @@ CREATE INDEX `calls_business_idx` ON `calls` (`business_id`,`created_at`);--> st
 CREATE TABLE `invoices` (
 	`id` text PRIMARY KEY NOT NULL,
 	`business_id` text NOT NULL,
+	`source` text DEFAULT 'manual' NOT NULL,
+	`external_id` text,
 	`invoice_number` text NOT NULL,
 	`customer_name` text NOT NULL,
-	`customer_phone` text NOT NULL,
+	`customer_phone` text,
 	`customer_email` text,
 	`amount_cents` integer NOT NULL,
 	`currency` text DEFAULT 'USD' NOT NULL,
@@ -88,11 +90,13 @@ CREATE TABLE `invoices` (
 	`collection_attempts` integer DEFAULT 0 NOT NULL,
 	`last_collection_at` integer,
 	`notes` text DEFAULT '' NOT NULL,
+	`synced_at` integer,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`business_id`) REFERENCES `businesses`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE INDEX `invoices_business_idx` ON `invoices` (`business_id`,`status`);--> statement-breakpoint
+CREATE UNIQUE INDEX `invoices_external_idx` ON `invoices` (`business_id`,`source`,`external_id`);--> statement-breakpoint
 CREATE TABLE `leads` (
 	`id` text PRIMARY KEY NOT NULL,
 	`business_id` text NOT NULL,
@@ -111,6 +115,22 @@ CREATE TABLE `leads` (
 );
 --> statement-breakpoint
 CREATE INDEX `leads_business_idx` ON `leads` (`business_id`,`status`);--> statement-breakpoint
+CREATE TABLE `quickbooks_connections` (
+	`business_id` text PRIMARY KEY NOT NULL,
+	`realm_id` text NOT NULL,
+	`company_name` text,
+	`access_token` text NOT NULL,
+	`refresh_token` text NOT NULL,
+	`access_token_expires_at` integer NOT NULL,
+	`refresh_token_expires_at` integer NOT NULL,
+	`customers_consented` integer DEFAULT false NOT NULL,
+	`last_sync_at` integer,
+	`last_sync_error` text,
+	`last_sync_imported` integer,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`business_id`) REFERENCES `businesses`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `users` (
 	`id` text PRIMARY KEY NOT NULL,
 	`business_id` text NOT NULL,

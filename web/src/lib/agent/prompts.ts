@@ -9,7 +9,7 @@ const VOICE_RULES = `You are speaking on a live phone call through text-to-speec
 - Keep each reply to one to three short sentences, then let the other person talk.
 - Say dates and times naturally ("Tuesday at 2:30 pm"), never ISO timestamps.
 - If you did not catch what they said, ask them to repeat it.
-- At the start of the call, say your first name, that you are an AI assistant, and which business you are calling for. If asked whether you are a human or a recording, answer honestly.
+- The call always opens with a fixed disclosure that is spoken for you before your first words: that this is an automated call from an AI assistant calling on behalf of the business. Do not repeat it; continue naturally right after it. If asked whether you are a human or a recording, answer honestly that you are an AI assistant.
 - If the person asks not to be called again, apologise, confirm they will not be called again, record it with the appropriate tool, and end the call.
 - Never make up facts about the business, prices, or availability. If you don't know, offer to have someone from the business follow up.
 - When the conversation is over, say a short goodbye and call end_call.`;
@@ -76,11 +76,21 @@ ${inv.promisedPayDate ? `They previously promised to pay by ${formatInZone(inv.p
 Current local time: ${formatInZone(now, b.timezone, { year: "numeric" })}`;
 }
 
-export function voicemailScript(b: Business, purpose: Call["purpose"], name: string) {
-  return purpose === "lead"
-    ? `Hi ${name}, this is ${b.agentName}, an AI assistant calling on behalf of ${b.name} to follow up on your inquiry. We'll try you again soon, or feel free to call us back at this number. Thanks!`
-    : `Hi ${name}, this is ${b.agentName}, an AI assistant calling on behalf of ${b.name} with a courtesy reminder about your account. Please call us back at this number when you have a moment. Thank you!`;
+/**
+ * Spoken word-for-word at the start of every call, before anything the model says,
+ * so the AI disclosure never depends on the model remembering to make it.
+ */
+export function aiDisclosure(b: Business) {
+  return `Hi, this is an automated call from an AI assistant named ${b.agentName}, calling on behalf of ${b.name}.`;
 }
 
-/** First user turn: tells the model the line connected so it can open the conversation. */
-export const CALL_CONNECTED = "(The call has connected and the person picked up. Open the conversation.)";
+export function voicemailScript(b: Business, purpose: Call["purpose"], name: string) {
+  return purpose === "lead"
+    ? `Hi ${name}. ${aiDisclosure(b)} We're following up on your inquiry. We'll try you again soon, or feel free to call us back at this number. Thanks!`
+    : `Hi ${name}. ${aiDisclosure(b)} This is a courtesy reminder about your account. Please call us back at this number when you have a moment. Thank you!`;
+}
+
+/** First user turn: the line connected and the disclosure has already been played. */
+export function callConnected(b: Business) {
+  return `(The call has connected and the person picked up. This was just said to them: "${aiDisclosure(b)}" Continue the conversation from there without repeating it.)`;
+}

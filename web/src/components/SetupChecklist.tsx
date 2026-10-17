@@ -12,10 +12,12 @@ type Settings = {
 /** Tells the owner what is still missing before the agent can make real calls. */
 export function SetupChecklist() {
   const { data } = useApi<{ settings: Settings }>("/api/v1/settings");
-  if (!data) return null;
+  const qb = useApi<{ quickbooks: { connected: boolean } }>("/api/v1/quickbooks");
+  if (!data || !qb.data) return null;
   const s = data.settings;
   const items = [
     { done: s.integrations.agent && s.integrations.telephony, label: "Phone line and AI agent connected (server configuration)" },
+    { done: qb.data.quickbooks.connected, label: "Connect QuickBooks so overdue invoices are found automatically", href: "/dashboard/invoices" },
     { done: Boolean(s.agentInstructions.trim()), label: "Tell the agent about your services and prices", href: "/dashboard/settings" },
     { done: Boolean(s.ownerPhone), label: "Add your mobile number for booking alerts", href: "/dashboard/settings" },
   ];
